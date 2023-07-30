@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  database: 
+    container_name: database_container
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/db_storage:/var/lib/postgresql/data
+      - ./database/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    restart: always
+    env_file: database/db.env
+
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4:latest
+    depends_on:
+      - database
+    ports:
+      - "8081:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=root
+    volumes:
+      - ./database/pgadmin:/var/lib/pgadmin
+
+  server:
+    container_name: server_container
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: server_image:latest
+    depends_on:
+      - database
+    ports:
+      - "8080:8080"
+
+volumes:
+  database_storage:
+    name: db_storage
+  pgadmin_storage:
+    name: pgadmin
+
