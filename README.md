@@ -1,4 +1,4 @@
-Auth TOKEN : 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
+Auth TOKEN : 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
 
 If you experience problems while trying to start the PageAdmin container, regarding permissions, use this:
 > sudo chown -R 5050:5050 pgadmin

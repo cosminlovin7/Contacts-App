@@ -22,6 +22,13 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import Tooltip from '@mui/material/Tooltip';
+import SearchIcon from '@mui/icons-material/Search';
+import TextField from '@mui/material/TextField';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
 import '../components/DefaultPage.css';
 
 function createData(firstName, lastName, groups, phoneNumber, mobileNetworkOperator) {
@@ -47,6 +54,10 @@ export default function Contacts() {
     const [openCTGModal, setOpenCTGModal] = useState(false);
     const [openModal, setOpenModal] = useState(false);
     const [selectedRow, setSelectedRow] = useState(null);
+    const [filterName, setFilterName] = useState('');
+    const [filterPhoneNumber, setFilterPhoneNumber] = useState('');
+    const [filterGroup, setFilterGroup] = useState('');
+    const [filterOperator, setFilterOperator] = useState('');
 
     const handleAddContact = () => {
         setOpenModal(true);
@@ -70,6 +81,41 @@ export default function Contacts() {
         setSelectedRow(null);
     }
 
+    const handleFilterNameChange = (event) => {
+        setFilterName(event.target.value);
+        console.log(event.target.value);
+    }
+
+    const handleFilterPhoneNumberChange = (event) => {
+        setFilterPhoneNumber(event.target.value);
+        console.log(event.target.value);
+    }
+
+    const handleFilterGroupChange = (event) => {
+        setFilterGroup(event.target.value);
+        console.log(event.target.value);
+    }
+
+    const handleFilterOperatorChange = (event) => {
+        setFilterOperator(event.target.value);
+    }
+
+    const handleSearchFilter = () => {
+        console.log(filterName);
+        console.log(filterPhoneNumber);
+        console.log(filterGroup);
+        console.log(filterOperator);
+    }
+
+    const handleResetFilter = () => {
+        setFilterName('');
+        setFilterPhoneNumber('');
+        setFilterGroup('');
+        setFilterOperator('');
+
+        console.log('reset filter called');
+    }
+
     return (
         <div className = "container">
             <div className = "menu-bar">
@@ -77,13 +123,64 @@ export default function Contacts() {
             </div>
             <div className = "panel">
                 <div className = "tool-bar">
-                    <div className = "button">
+                    <div className = "button left">
                         <Tooltip title="Add new contact">
                             <IconButton onClick={handleAddContact}>    
                                 <AddCircleIcon/>
                             </IconButton>
                         </Tooltip>
                         <AddContact open={openModal} setOpen={setOpenModal}/>
+                    </div>
+                    <div className = "button right">
+                        <TextField
+                            margin="dense" 
+                            id="operator" 
+                            label="Operator" 
+                            type="text"  
+                            value={filterOperator}
+                            sx={{ width: '150px', marginLeft: '2px', marginRight: '2px' }}
+                            onChange={handleFilterOperatorChange}/>
+                        <FormControl>
+                            <InputLabel id="group-select-label">Group</InputLabel>
+                            <Select
+                                labelId="group-select-label"
+                                id="group-select"
+                                value={filterGroup}
+                                label="Group"
+                                sx={{ width: '150px', marginLeft: '2px', marginRight: '2px', marginBottom: '4px', marginTop: '8px' }}
+                                onChange={handleFilterGroupChange}
+                                >
+                                <MenuItem value={10}>Ten</MenuItem>
+                                <MenuItem value={20}>Twenty</MenuItem>
+                                <MenuItem value={30}>Thirty</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <TextField
+                            margin="dense" 
+                            id="name" 
+                            label="Name" 
+                            type="text"
+                            value={filterName}  
+                            sx={{ width: '75px', marginLeft: '2px', marginRight: '2px' }}
+                            onChange={handleFilterNameChange}/>
+                        <TextField
+                            margin="dense" 
+                            id="phoneNumber" 
+                            label="Phone Number" 
+                            value={filterPhoneNumber}
+                            type="tel"  
+                            sx={{ width: '150px', marginLeft: '2px', marginRight: '2px'}}
+                            onChange={handleFilterPhoneNumberChange}/>
+                        <Tooltip title="Search">
+                            <IconButton onClick={handleSearchFilter}>    
+                                <SearchIcon/>
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Reset filter">
+                            <IconButton onClick={handleResetFilter}>    
+                                <RestartAltIcon/>
+                            </IconButton>
+                        </Tooltip>
                     </div>
                 </div>
                 <div className = "content">

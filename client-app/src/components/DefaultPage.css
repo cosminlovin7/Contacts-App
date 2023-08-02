@@ -31,6 +31,20 @@
 
 .tool-bar {
     padding-bottom: 5px;
+    padding-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    overflow: auto;
+}
+
+.left {
+    /* Add any additional styles for the left side here */
+  }
+  
+.right {
+/* Add any additional styles for the right side here */
     display: flex;
     align-items: center;
 }
