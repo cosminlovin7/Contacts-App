@@ -5,3 +5,7 @@ If you experience problems while trying to start the PageAdmin container, regard
 
 In order to run the back-end application:
 > docker-compose up --build -d
+
+In order to run the client application:
+> npm install
+> npm start
