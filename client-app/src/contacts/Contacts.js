@@ -1,4 +1,4 @@
-import { React, useState } from 'react';
+import { React, useState, useEffect } from 'react';
 import MenuBar from '../components/MenuBar.js';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import IconButton from '@mui/material/IconButton';
@@ -10,6 +10,7 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TablePagination from '@mui/material/TablePagination';
 import Card from '@mui/material/Card';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
@@ -29,17 +30,11 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import '../components/DefaultPage.css';
-
-function createData(firstName, lastName, groups, phoneNumber, mobileNetworkOperator) {
-    return { firstName, lastName, groups, phoneNumber, mobileNetworkOperator };
-}
-  
-const rows = [
-    createData('Cosmin', 'Lovin', ['Family'], '0753690515', 'DIGI'),
-    createData('Bianca', 'Besnea', ['Family', 'Friends'], '0753690516', 'TELEKOM'),
-    createData('Alin', 'Popescu', [], '0766051234', 'Orange')
-];
+import config from '../config.js';
+import axios from 'axios';
 
 const table_row_styles = {
     background: 'rgb(0,174,191)',
@@ -47,6 +42,28 @@ const table_row_styles = {
     background: '-webkit-linear-gradient(90deg, rgba(0,174,191,1) 21%, rgba(0,255,171,1) 77%)',
     background: 'linear-gradient(90deg, rgba(0,174,191,1) 21%, rgba(0,255,171,1) 77%)',
     filter: 'progid:DXImageTransform.Microsoft.gradient(startColorstr="#00aebf",endColorstr="#00ffab",GradientType=1)'
+};
+
+const fetchContacts = async function(page) {
+    return axios
+        .get(config.HOST + '/contacts/page/' + page)
+        .then((response) => {
+            return response.data;
+        })
+        .catch((error) => {
+            throw error;
+        });
+};
+
+const fetchContactsCount = async function() {
+    return axios
+        .get(config.HOST + '/contacts/count')
+        .then((response) => {
+            return response.data;
+        })
+        .catch((error) => {
+            throw error;
+        })
 }
 
 export default function Contacts() {
@@ -58,6 +75,31 @@ export default function Contacts() {
     const [filterPhoneNumber, setFilterPhoneNumber] = useState('');
     const [filterGroup, setFilterGroup] = useState('');
     const [filterOperator, setFilterOperator] = useState('');
+    const [contactsData, setContactsData] = useState(null);
+    const [contactsCount, setContactsCount] = useState(0);
+    const [page, setPage] = useState(0);
+
+    useEffect(() => {
+        fetchContacts(page)
+            .then((data) => {
+                console.log('Data fetched successfully:', data);
+                toast.success('Data loaded successfully.');
+                setContactsData(data);
+            })
+            .catch((error) => {
+                console.error('Error while fetching the contacts:', error);
+                toast.error('Error while loading data.');
+            })
+
+        fetchContactsCount()
+            .then((data) => {
+                console.log('Contacts count: ', data);
+                setContactsCount(data.contact);
+            })
+            .catch((error) => {
+                console.error('Error while fetching the countacts count:', error);
+            })
+    }, [page]);
 
     const handleAddContact = () => {
         setOpenModal(true);
@@ -116,8 +158,15 @@ export default function Contacts() {
         console.log('reset filter called');
     }
 
+    const handleChangePage = (event, newPage) => {
+        console.log('page changed');
+        setPage(newPage);
+        setContactsData(null);
+    }
+
     return (
         <div className = "container">
+            <ToastContainer/>
             <div className = "menu-bar">
                 <MenuBar value={0}/>
             </div>
@@ -185,7 +234,7 @@ export default function Contacts() {
                 </div>
                 <div className = "content">
                     <TableContainer component={Card}>
-                        <Table sx={{ minWidth: 475 }}>
+                        <Table style={{ tableLayout: 'fixed' }}>
                             <TableHead>
                                 <TableRow style={table_row_styles}>
                                     <TableCell >Name</TableCell>
@@ -194,18 +243,28 @@ export default function Contacts() {
                                     <TableCell align="right">Mobile Network Operator</TableCell>
                                 </TableRow>
                             </TableHead>
-                            <TableBody>
-                                {rows.map((row) => (
-                                    <TableRow sx={{ cursor: 'pointer' }} hover key={row.phoneNumber} onClick={() => handleRowClick(row)}>
-                                        <TableCell >{row.firstName} {row.lastName}</TableCell>
-                                        <TableCell align="right">{row.groups.length > 0 ? row.groups.length > 1 ? row.groups[0] + ',...' : row.groups[0] : ''}</TableCell>
-                                        <TableCell align="right">{row.phoneNumber}</TableCell>
-                                        <TableCell align="right">{row.mobileNetworkOperator}</TableCell>
+                            {null != contactsData ? (<TableBody>
+                                {contactsData.contacts.map((contact) => {
+                                    return (
+                                    <TableRow sx={{ cursor: 'pointer' }} hover key={contact.id + contact.phoneNumber.number} onClick={() => handleRowClick(contact)}>
+                                        <TableCell >{contact.name}</TableCell>
+                                        <TableCell align="right">N/A</TableCell>
+                                        <TableCell align="right">{contact.phoneNumber.number}</TableCell>
+                                        <TableCell align="right">{'' != contact.operatorName ? contact.operatorName : 'N/A'}</TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
+                                    );
+                                })}
+                            </TableBody>) : <TableBody/>}
                         </Table>
                     </TableContainer>
+                    <TablePagination
+                        rowsPerPageOptions={[10]}
+                        component="div"
+                        count={contactsCount}
+                        rowsPerPage={10}
+                        page={page}
+                        onPageChange={handleChangePage}
+                    />
                 </div>
             </div>
 
@@ -219,21 +278,21 @@ export default function Contacts() {
                 <Divider/>
                 <DialogContent>
                     <DialogContentText>
-                        <b>Name:</b> {selectedRow != null ? selectedRow.firstName + ' ' + selectedRow.lastName : 'Name not set'}
+                        <b>Name:</b> {selectedRow != null ? selectedRow.name : 'Name not set'}
                     </DialogContentText>
                     <DialogContentText>
-                        <b>Phone Number:</b> {selectedRow != null ? selectedRow.phoneNumber : 'Phone Number not set'}
+                        <b>Phone Number:</b> {selectedRow != null ? selectedRow.phoneNumber.number : 'Phone Number not set'}
                     </DialogContentText>
                     <Accordion>
                         <AccordionSummary>
                             <b>Groups</b>
                         </AccordionSummary>
                         <AccordionDetails style={{ maxHeight: '200px', overflow: 'auto' }}>
-                            {selectedRow != null ? <ul style={{ listStyleType: 'none', padding: 0 }}>
+                            {/* {selectedRow != null ? <ul style={{ listStyleType: 'none', padding: 0 }}>
                                 {selectedRow.groups.map((group, index) => (
                                     <li key={index}>{group}</li>
                                 ))}
-                            </ul> : ''}
+                            </ul> : ''} */}
                         </AccordionDetails>
                     </Accordion>
                 </DialogContent>

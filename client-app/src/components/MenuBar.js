@@ -36,7 +36,7 @@ export default function MenuBar(props) {
             centered
             sx={{
                 '& .Mui-selected': {
-                  color: 'black',
+                  color: 'green',
                 },
             }}>
             <Tab icon={<PhoneIcon />} label="CONTACTS"/>

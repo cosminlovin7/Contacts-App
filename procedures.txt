@@ -1,0 +1,115 @@
+CREATE OR REPLACE FUNCTION insert_phone_number(ph_number TEXT, mobile_operator_id INTEGER)
+RETURNS phone_numbers AS
+$$
+DECLARE
+    inserted_row phone_numbers;
+BEGIN
+    INSERT INTO phone_numbers (phone_number, mob_net_operator_id)
+    VALUES (ph_number, mobile_operator_id)
+    RETURNING * INTO inserted_row;
+    
+    RETURN inserted_row;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION read_one_mobile_operator_by_operator_number(operator_prefix VARCHAR)
+RETURNS SETOF mobile_network_operators AS
+$$
+BEGIN
+    RETURN QUERY SELECT * FROM mobile_network_operators 
+				 WHERE operator_number = operator_prefix
+                 LIMIT 1;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION insert_person(p_first_name VARCHAR, p_last_name VARCHAR, p_phone_number_id INTEGER)
+RETURNS persons AS
+$$
+DECLARE
+    inserted_person persons;
+BEGIN
+    INSERT INTO persons (first_name, last_name)
+    VALUES (p_first_name, p_last_name)
+    RETURNING * INTO inserted_person;
+    
+    INSERT INTO persons_phone_numbers (person_id, phone_number_id)
+    VALUES (inserted_person.id, p_phone_number_id);
+
+    RETURN inserted_person;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE insert_phone_number_to_person(person_id INTEGER, ph_number VARCHAR, mobile_network_operator_id INTEGER)
+AS 
+$$
+DECLARE 
+    inserted_phone_number phone_numbers;
+BEGIN
+    INSERT INTO phone_numbers (phone_number, mob_net_operator_id) 
+    VALUES (ph_number, mobile_network_operator_id)
+    RETURNING * INTO inserted_phone_number;
+
+    INSERT INTO persons_phone_numbers (person_id, phone_number_id)
+    VALUES (person_id, inserted_phone_number.id);
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION read_contacts()
+RETURNS TABLE (id INTEGER, first_name VARCHAR, last_name VARCHAR, phone_number_id INTEGER, phone_number VARCHAR, operator_name VARCHAR, operator_number VARCHAR) AS
+$$
+BEGIN
+    RETURN QUERY SELECT p.id, p.first_name, p.last_name, pn.id, pn.phone_number, op.operator_name, op.operator_number FROM persons p
+                JOIN persons_phone_numbers ppn ON p.id = ppn.person_id
+                JOIN phone_numbers pn ON ppn.phone_number_id = pn.id
+                LEFT JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION insert_mobile_network_operator_without_operator_name(op_number VARCHAR)
+RETURNS mobile_network_operators AS
+$$
+DECLARE
+    inserted_operator mobile_network_operators;
+BEGIN
+    INSERT INTO mobile_network_operators (operator_number)
+    VALUES (op_number)
+    RETURNING * INTO inserted_operator;
+
+    return inserted_operator;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION read_contacts_page(page_number INTEGER)
+RETURNS TABLE (id INTEGER, first_name VARCHAR, last_name VARCHAR, phone_number_id INTEGER, phone_number VARCHAR, operator_name VARCHAR, operator_number VARCHAR) AS
+$$
+BEGIN
+    RETURN QUERY SELECT p.id, p.first_name, p.last_name, pn.id, pn.phone_number, op.operator_name, op.operator_number FROM persons p
+                JOIN persons_phone_numbers ppn ON p.id = ppn.person_id
+                JOIN phone_numbers pn ON ppn.phone_number_id = pn.id
+                LEFT JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id
+                LIMIT 10 OFFSET page_number;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION read_contacts_count()
+RETURNS INTEGER AS
+$$
+DECLARE 
+	count_result INTEGER;
+BEGIN
+    SELECT count(*) as count_result FROM persons p
+	JOIN persons_phone_numbers ppn ON p.id = ppn.person_id
+	JOIN phone_numbers pn ON ppn.phone_number_id = pn.id
+	LEFT JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id;
+	
+	RETURN count_result;
+END;
+$$
+LANGUAGE plpgsql;
