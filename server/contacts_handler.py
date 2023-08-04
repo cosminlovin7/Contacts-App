@@ -323,3 +323,30 @@ def insert_phone_number_to_contact_handler(database, person_id, body):
     response = make_response(message, CREATED)
     response.headers["Content-Type"] = "application/json"
     return response
+
+def read_contacts_paginated_filtered_handler(database, page_id, name, mobile_network_operator, phone_number):
+    database_cursor = database.instance.cursor()
+
+    database_cursor.execute("SELECT read_contacts_page_filtered(%s, %s, %s, %s);", (name, mobile_network_operator, phone_number, page_id * 10))
+    query_result = database_cursor.fetchall()
+    print(query_result)
+
+    contact_list = extract_contacts_list(query_result)
+
+    result = {"contacts": contact_list}
+    response = make_response(result, OK)
+    response.headers["Content-Type"] = "application/json"
+    return response
+
+def read_contacts_paginated_filtered_count_handler(database, name, mobile_network_operator, phone_number):
+    database_cursor = database.instance.cursor()
+
+    database_cursor.execute("SELECT read_contacts_page_filtered_count(%s, %s, %s);", (name, mobile_network_operator, phone_number))
+    query_result = database_cursor.fetchall()
+
+    contacts_count = query_result[0][0]
+
+    result = {"contact": contacts_count}
+    response = make_response(result, OK)
+    response.headers["Content-Type"] = "application/json"
+    return response

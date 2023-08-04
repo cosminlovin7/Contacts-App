@@ -13,7 +13,7 @@
     filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#00aebf",endColorstr="#00ffab",GradientType=1);
 }
 
-/* .panel {
+.panel {
     flex: 1;
     padding-left: 5%;
     padding-right: 5%;
@@ -28,7 +28,7 @@
     flex-direction: column;
     align-items: center;
 } 
-*/
+
 
 .tool-bar {
     padding-bottom: 5px;
