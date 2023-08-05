@@ -4,7 +4,7 @@ import psycopg2
 from phone_number import PhoneNumber
 from mobile_network_operator import MobileNetworkOperator
 from person import Person
-from dto.contacts_dto import ContactsDto, PhoneNumberDto
+from dto.contacts_dto import ContactsDto, SingleContactDto, SinglePhoneNumberDto
 from constants import *
 
 """
@@ -34,6 +34,9 @@ def check_contact_valid_json(contact_cmd):
         return False
     
     if (len(contact_cmd['lastName']) > 50):
+        return False
+    
+    if (len(contact_cmd['firstName']) == 0 and len(contact_cmd['lastName']) == 0):
         return False
     
     if (len(contact_cmd['phoneNumber']) != 10):
@@ -79,6 +82,37 @@ def read_contacts_handler(database):
     contact_list = extract_contacts_list(query_result)
 
     result = {"contacts": contact_list}
+    response = make_response(result, OK)
+    response.headers["Content-Type"] = "application/json"
+    return response
+
+def extract_contact(query_result):
+    created_contact = False
+    contact_obj = None 
+
+    for row in query_result:
+        elements = row[0].strip('()').split(',')
+        if (not created_contact):
+            contact_obj = SingleContactDto(elements[0], elements[1], elements[2])
+            phone_number_obj = SinglePhoneNumberDto(elements[3], elements[4], elements[5], elements[6])
+            created_contact = True
+            contact_obj.phone_numbers.append(phone_number_obj)
+        else:
+            phone_number_obj = SinglePhoneNumberDto(elements[3], elements[4], elements[5], elements[6])
+            created_contact = True
+            contact_obj.phone_numbers.append(phone_number_obj)
+
+    return contact_obj.getDictionary()
+
+def read_contact_handler(database, contact_id):
+    database_cursor = database.instance.cursor()
+
+    database_cursor.execute("SELECT read_contact(%s);", (contact_id,))
+    query_result = database_cursor.fetchall()
+
+    contact = extract_contact(query_result)
+
+    result = {"contact": contact}
     response = make_response(result, OK)
     response.headers["Content-Type"] = "application/json"
     return response
@@ -200,8 +234,16 @@ def insert_contact_handler(database, body):
         response.headers["Content-Type"] = "application/json"
         return response
 
-    first_name = contact_cmd['firstName']
-    last_name = contact_cmd['lastName']
+    print(contact_cmd)
+
+    first_name = None
+    if contact_cmd['firstName'] != '':
+        first_name = contact_cmd['firstName']
+    
+    last_name = None
+    if contact_cmd['lastName'] != '':
+        last_name = contact_cmd['lastName']
+
     operator_number = contact_cmd['phoneNumber'][:3]
     phone_number = contact_cmd['phoneNumber'][-7:]
 
@@ -348,5 +390,49 @@ def read_contacts_paginated_filtered_count_handler(database, name, mobile_networ
 
     result = {"contact": contacts_count}
     response = make_response(result, OK)
+    response.headers["Content-Type"] = "application/json"
+    return response
+
+def delete_contact_function(database, contact_id):
+    with database.instance.cursor() as cursor:
+        cursor.execute("CALL delete_contact(%s);", (contact_id,))
+        database.instance.commit()
+
+        return
+
+def delete_contact_handler(database, contact_id):
+    try:
+        delete_contact_function(database, contact_id)
+    except Exception as e:
+        database.instance.rollback()
+        error_message = {"error": "An unexpected error occurred.", "type": e}
+        response = make_response(error_message, INTERNAL_ERROR)
+        response.headers["Content-Type"] = "application/json"
+        return response
+
+    message = {"message": "The contact has been deleted successfully."}
+    response = make_response(message, OK)
+    response.headers["Content-Type"] = "application/json"
+    return response
+
+def delete_phone_number_function(database, phone_number_id):
+    with database.instance.cursor() as cursor:
+        cursor.execute("CALL delete_phone_number(%s);", (phone_number_id,))
+        database.instance.commit()
+
+        return
+
+def delete_phone_number_handler(database, phone_number_id):
+    try:
+        delete_phone_number_function(database, phone_number_id)
+    except Exception as e:
+        database.instance.rollback()
+        error_message = {"error": "An unexpected error occurred.", "type": e}
+        response = make_response(error_message, INTERNAL_ERROR)
+        response.headers["Content-Type"] = "application/json"
+        return response
+
+    message = {"message": "The phone number has been deleted successfully."}
+    response = make_response(message, OK)
     response.headers["Content-Type"] = "application/json"
     return response

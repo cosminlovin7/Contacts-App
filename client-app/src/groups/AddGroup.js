@@ -7,7 +7,27 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './AddGroup.css';
+import config from '../config.js';
+import axios from 'axios';
+
+const insert_group = async function(name) {
+    var url = config.HOST + '/groups';
+    const body = {
+        name: name
+    }
+
+    return axios
+        .post(url, body)
+        .then((response) => {
+            return response;
+        })
+        .catch((error) => {
+            throw error;
+        });
+}
 
 export default function AddGroup(props) {
     const [open, setOpen] = [props.open, props.setOpen];
@@ -27,6 +47,23 @@ export default function AddGroup(props) {
         if (nameError != '') {
             return;
         }
+
+        insert_group(name)
+            .then((response) => {
+                const statusCode = response.status;
+                console.log(statusCode);
+                if (statusCode == 201) {
+                    toast.success(response.data.message);
+                    props.doRefreshPage();
+                } else if (statusCode == 409) {
+                    toast.warn(response.data.error);
+                }
+            })
+            .catch((error) => {
+                toast.error('Error while inserting new contact.');
+            });
+
+
         setOpen(false);
     }
 
@@ -36,6 +73,7 @@ export default function AddGroup(props) {
 
     return (
         <div>
+            <ToastContainer/>
             <Dialog open={open} onClose={handleClose} fullWidth>
                 <DialogTitle>Add Group</DialogTitle>
                 <Divider/>

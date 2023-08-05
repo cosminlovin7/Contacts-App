@@ -4,6 +4,9 @@ import AddCircleIcon from '@mui/icons-material/AddCircle';
 import IconButton from '@mui/material/IconButton';
 import AddContact from './AddContact.js';
 import AddContactToGroup from './AddContactToGroup.js';
+import AddPhoneNumber from './AddPhoneNumber.js';
+import DeleteContact from './DeleteContact.js';
+import DeletePhoneNumber from './DeletePhoneNumber.js';
 import TableContainer from '@mui/material/TableContainer';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -30,9 +33,13 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
+import AddIcCallIcon from '@mui/icons-material/AddIcCall';
 import { ToastContainer, toast } from 'react-toastify';
+import PhonelinkEraseIcon from '@mui/icons-material/PhonelinkErase';
+import DeleteIcon from '@mui/icons-material/Delete';
 import 'react-toastify/dist/ReactToastify.css';
 import '../components/DefaultPage.css';
+import './Contacts.css'
 import config from '../config.js';
 import axios from 'axios';
 
@@ -63,13 +70,80 @@ const fetchContactsCount = async function() {
         })
         .catch((error) => {
             throw error;
+        });
+}
+
+const fetchContactsFiltered = async function(page, filterName, filterPhoneNumber, filterGroup, filterOperator) {
+    var url = config.HOST + '/contacts/page/' + page + '/filter?';
+    if ('' != filterName)
+        url += 'name=' + filterName;
+    if ('' != filterPhoneNumber)
+        url += '&phone_number=' + filterPhoneNumber;
+    if ('' != filterOperator)
+        url += '&mobile_network_operator=' + filterOperator;
+
+    return axios
+        .get(url)
+        .then((response) => {
+            return response.data;
         })
+        .catch((error) => {
+            throw error;
+        });
+}
+
+const fetchContactsFilteredCount = async function(filterName, filterPhoneNumber, filterGroup, filterOperator) {
+    var url = config.HOST + '/contacts/count/filter?';
+    if ('' != filterName)
+        url += 'name=' + filterName;
+    if ('' != filterPhoneNumber)
+        url += '&phone_number=' + filterPhoneNumber;
+    if ('' != filterOperator)
+        url += '&mobile_network_operator=' + filterOperator;
+
+    return axios
+        .get(url)
+        .then((response) => {
+            return response.data;
+        })
+        .catch((error) => {
+            throw error;
+        });
+}
+
+const fetchContactById = async function(contact_id) {
+    var url = config.HOST + '/contacts/' + contact_id;
+
+    return axios
+        .get(url)
+        .then((response) => {
+            return response.data;
+        })
+        .catch((error) => {
+            throw error;
+        });
+}
+
+const fetchGroups = async function() {
+    var url = config.HOST + '/groups';
+
+    return axios
+        .get(url)
+        .then((response) => {
+            return response.data;
+        })
+        .catch((error) => {
+            throw error;
+        });
 }
 
 export default function Contacts() {
     const [openProfileModal, setOpenProfileModal] = useState(false);
     const [openCTGModal, setOpenCTGModal] = useState(false);
     const [openModal, setOpenModal] = useState(false);
+    const [openAddPhoneModal, setOpenAddPhoneModal] = useState(false);
+    const [openDeleteContactModal, setOpenDeleteContactModal] = useState(false);
+    const [openDeletePhoneNumberModal, setOpenDeletePhoneNumberModal] = useState(false);
     const [selectedRow, setSelectedRow] = useState(null);
     const [filterName, setFilterName] = useState('');
     const [filterPhoneNumber, setFilterPhoneNumber] = useState('');
@@ -78,28 +152,81 @@ export default function Contacts() {
     const [contactsData, setContactsData] = useState(null);
     const [contactsCount, setContactsCount] = useState(0);
     const [page, setPage] = useState(0);
+    const [pageFiltered, setPageFiltered] = useState(false);
+    const [refreshPage, setRefreshPage] = useState(false);
+    const [selectedContact, setSelectedContact] = useState(null);
+    const [requireRefresh, setRequireRefresh] = useState(false);
+    const [groupsData, setGroupsData] = useState(null);
+
+    function doRefreshPage() {
+        setOpenProfileModal(false);
+        setOpenCTGModal(false);
+        setOpenModal(false);
+        setOpenAddPhoneModal(false);
+        setOpenDeleteContactModal(false);
+        setSelectedRow(null);
+        setFilterName('');
+        setFilterPhoneNumber('');
+        setFilterGroup('');
+        setContactsData(null);
+        setContactsCount(0);
+        setPage(0);
+        setPageFiltered(false);
+        setRefreshPage(!refreshPage);
+        setSelectedContact(null);
+        setRequireRefresh(false);
+        setGroupsData(null);
+    }
 
     useEffect(() => {
-        fetchContacts(page)
+        if (!pageFiltered) {
+            fetchContacts(page)
+                .then((data) => {
+                    console.log('Data fetched successfully:', data);
+                    toast.success('Contacts loaded successfully.');
+                    setContactsData(data);
+                })
+                .catch((error) => {
+                    console.error('Error while fetching the contacts:', error);
+                    toast.error('Error while loading data.');
+                })
+
+            fetchContactsCount()
+                .then((data) => {
+                    console.log('Contacts count: ', data);
+                    setContactsCount(data.contact);
+                })
+                .catch((error) => {
+                    console.error('Error while fetching the countacts count:', error);
+                })
+        } else {
+            fetchContactsFiltered(page, filterName, filterPhoneNumber, filterGroup, filterOperator)
+                .then((data) => {
+                    toast.success('Filtered contacts loaded successfully.');
+                    setContactsData(data);
+                })
+                .catch((error) => {
+                    toast.error('Error while loading filtered data.');
+                })
+
+            fetchContactsFilteredCount(filterName, filterPhoneNumber, filterGroup, filterOperator)
+                .then((data) => {
+                    setContactsCount(data.contact);
+                })
+                .catch((error) => {
+                    toast.error('Error while fetching the contacts filtered count.');
+                })
+        }
+
+        fetchGroups()
             .then((data) => {
-                console.log('Data fetched successfully:', data);
-                toast.success('Data loaded successfully.');
-                setContactsData(data);
+                setGroupsData(data);
             })
             .catch((error) => {
-                console.error('Error while fetching the contacts:', error);
-                toast.error('Error while loading data.');
+                toast.error('Error while fetching the contacts filtered count.');
             })
 
-        fetchContactsCount()
-            .then((data) => {
-                console.log('Contacts count: ', data);
-                setContactsCount(data.contact);
-            })
-            .catch((error) => {
-                console.error('Error while fetching the countacts count:', error);
-            })
-    }, [page]);
+    }, [page, pageFiltered, refreshPage]);
 
     const handleAddContact = () => {
         setOpenModal(true);
@@ -109,10 +236,36 @@ export default function Contacts() {
         setOpenCTGModal(true);
     }
 
+    const handleAddPhoneNumber = () => {
+        setOpenAddPhoneModal(true);
+    }
+
+    const handleDeleteContact = () => {
+        setOpenDeleteContactModal(true);
+    }
+
+    function refreshSelectedRow() {
+        if (null != selectedRow)
+            fetchContactById(selectedRow.id)
+                .then((data) => {
+                    setSelectedRow(data.contact);
+                })
+                .catch((error) => {
+                    toast.error('Error while fetching the contact.');
+                })
+    }
+
     function handleRowClick(row) {
         console.log(row);
+        fetchContactById(row.id)
+            .then((data) => {
+                setSelectedRow(data.contact);
+            })
+            .catch((error) => {
+                toast.error('Error while fetching the contact.');
+            })
+
         setOpenProfileModal(true);
-        setSelectedRow(row);
     }
 
     function handleDialogClose() {
@@ -121,6 +274,9 @@ export default function Contacts() {
 
     function handleDialogExited() {
         setSelectedRow(null);
+        if (requireRefresh) {
+            doRefreshPage()
+        }
     }
 
     const handleFilterNameChange = (event) => {
@@ -143,25 +299,27 @@ export default function Contacts() {
     }
 
     const handleSearchFilter = () => {
-        console.log(filterName);
-        console.log(filterPhoneNumber);
-        console.log(filterGroup);
-        console.log(filterOperator);
+        // doRefreshPage();
+
+        setPage(0);
+        setRefreshPage(!refreshPage);
+        setPageFiltered(true);
     }
 
-    const handleResetFilter = () => {
-        setFilterName('');
-        setFilterPhoneNumber('');
-        setFilterGroup('');
-        setFilterOperator('');
-
-        console.log('reset filter called');
+    const handleRefreshPage = () => {
+        doRefreshPage();
     }
 
     const handleChangePage = (event, newPage) => {
         console.log('page changed');
         setPage(newPage);
         setContactsData(null);
+    }
+
+    function handleOnRemovePhoneNumber(phoneNumber) {
+        console.log('remove phone number function called.', phoneNumber);
+        setSelectedContact(phoneNumber);
+        setOpenDeletePhoneNumberModal(true);
     }
 
     return (
@@ -178,7 +336,7 @@ export default function Contacts() {
                                 <AddCircleIcon/>
                             </IconButton>
                         </Tooltip>
-                        <AddContact open={openModal} setOpen={setOpenModal}/>
+                        <AddContact open={openModal} setOpen={setOpenModal} doRefreshPage={doRefreshPage}/>
                     </div>
                     <div className = "button right">
                         <TextField
@@ -199,9 +357,13 @@ export default function Contacts() {
                                 sx={{ width: '150px', marginLeft: '2px', marginRight: '2px', marginBottom: '4px', marginTop: '8px' }}
                                 onChange={handleFilterGroupChange}
                                 >
-                                <MenuItem value={10}>Ten</MenuItem>
-                                <MenuItem value={20}>Twenty</MenuItem>
-                                <MenuItem value={30}>Thirty</MenuItem>
+                                    {null != groupsData ? (
+                                        groupsData.groups.map((group) => {
+                                            return (
+                                                <MenuItem key={group.id} value={group.name}>{group.name}</MenuItem>
+                                            );
+                                        })
+                                    ) : ''}
                             </Select>
                         </FormControl>
                         <TextField
@@ -225,8 +387,8 @@ export default function Contacts() {
                                 <SearchIcon/>
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title="Reset filter">
-                            <IconButton onClick={handleResetFilter}>    
+                        <Tooltip title="Refresh page">
+                            <IconButton onClick={handleRefreshPage}>    
                                 <RestartAltIcon/>
                             </IconButton>
                         </Tooltip>
@@ -280,9 +442,22 @@ export default function Contacts() {
                     <DialogContentText>
                         <b>Name:</b> {selectedRow != null ? selectedRow.name : 'Name not set'}
                     </DialogContentText>
-                    <DialogContentText>
-                        <b>Phone Number:</b> {selectedRow != null ? selectedRow.phoneNumber.number : 'Phone Number not set'}
-                    </DialogContentText>
+                    <Accordion>
+                        <AccordionSummary>
+                            <b>Phone Numbers</b>
+                        </AccordionSummary>
+                        <AccordionDetails style={{ maxHeight: '200px', overflow: 'auto' }}>
+                            {selectedRow != null ? <ul style={{ listStyleType: 'none', padding: 0 }}>
+                                {selectedRow.phoneNumbers.map((phoneNumber, index) => (
+                                    <li key={index}>
+                                        {'' != phoneNumber.operatorName ? 
+                                        (<div className="phone-number-container"><div className="ph-left">{phoneNumber.number}({phoneNumber.operatorName})</div><div className="ph-right"><Tooltip title="Remove phone number"><IconButton onClick={() => handleOnRemovePhoneNumber(phoneNumber)}><PhonelinkEraseIcon/></IconButton></Tooltip></div></div>) : 
+                                        (<div className="phone-number-container"><div className="ph-left">{phoneNumber.number}</div><div className="ph-right"><Tooltip title="Remove phone number"><IconButton onClick={() => handleOnRemovePhoneNumber(phoneNumber)}><PhonelinkEraseIcon/></IconButton></Tooltip></div></div>)}
+                                    </li>
+                                ))}
+                            </ul> : ''}
+                        </AccordionDetails>
+                    </Accordion>
                     <Accordion>
                         <AccordionSummary>
                             <b>Groups</b>
@@ -302,9 +477,22 @@ export default function Contacts() {
                             <GroupAddIcon/>
                         </IconButton>
                     </Tooltip>
-                    <AddContactToGroup open={openCTGModal} setOpen={setOpenCTGModal}/>
+                    <AddContactToGroup open={openCTGModal} setOpen={setOpenCTGModal} setRequireRefresh={setRequireRefresh}/>
+                    <Tooltip title="Add phone number">
+                        <IconButton onClick={handleAddPhoneNumber}>
+                            <AddIcCallIcon/>
+                        </IconButton>
+                    </Tooltip>
+                    <AddPhoneNumber open={openAddPhoneModal} setOpen={setOpenAddPhoneModal} selectedRow={selectedRow} setRequireRefresh={setRequireRefresh} refreshSelectedRow={refreshSelectedRow}/>
+                    <Tooltip title="Delete contact">
+                        <IconButton onClick={handleDeleteContact}>
+                            <DeleteIcon/>
+                        </IconButton>
+                    </Tooltip>
+                    <DeleteContact open={openDeleteContactModal} setOpen={setOpenDeleteContactModal} selectedRow={selectedRow} doRefreshPage={doRefreshPage}/>
                 </DialogActions>
             </Dialog>
+            <DeletePhoneNumber open={openDeletePhoneNumberModal} setOpen={setOpenDeletePhoneNumberModal} selectedContact={selectedContact} setRequireRefresh={setRequireRefresh} refreshSelectedRow={refreshSelectedRow}/>
         </div>
     );
 }

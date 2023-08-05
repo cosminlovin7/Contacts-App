@@ -65,7 +65,7 @@ BEGIN
     RETURN QUERY SELECT p.id, p.first_name, p.last_name, pn.id, pn.phone_number, op.operator_name, op.operator_number FROM persons p
                 JOIN persons_phone_numbers ppn ON p.id = ppn.person_id
                 JOIN phone_numbers pn ON ppn.phone_number_id = pn.id
-                LEFT JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id;
+                JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id;
 END;
 $$
 LANGUAGE plpgsql;
@@ -92,7 +92,7 @@ BEGIN
     RETURN QUERY SELECT p.id, p.first_name, p.last_name, pn.id, pn.phone_number, op.operator_name, op.operator_number FROM persons p
                 JOIN persons_phone_numbers ppn ON p.id = ppn.person_id
                 JOIN phone_numbers pn ON ppn.phone_number_id = pn.id
-                LEFT JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id
+                JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id
                 LIMIT 10 OFFSET page_number;
 END;
 $$
@@ -105,7 +105,7 @@ BEGIN
     RETURN QUERY SELECT count(*) as count_result FROM persons p
                 JOIN persons_phone_numbers ppn ON p.id = ppn.person_id
                 JOIN phone_numbers pn ON ppn.phone_number_id = pn.id
-                LEFT JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id;
+                JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id;
 END;
 $$
 LANGUAGE plpgsql;
@@ -137,9 +137,50 @@ BEGIN
                 WHERE (f_name is null OR concat(concat(p.first_name, ' '),p.last_name) LIKE concat(concat('%', f_name), '%')) AND
                         (f_phone_number is null OR concat(op.operator_number, pn.phone_number) LIKE concat(concat('%', f_phone_number), '%')) AND
                         (f_operator_name is null OR op.operator_name LIKE concat(concat('%', f_operator_name), '%'));
-
-    RETURN count_result;
 END;
 $$
 LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION read_contact(contact_id INTEGER)
+RETURNS TABLE (id INTEGER, first_name VARCHAR, last_name VARCHAR, phone_number_id INTEGER, phone_number VARCHAR, operator_name VARCHAR, operator_number VARCHAR) AS
+$$
+BEGIN
+    RETURN QUERY SELECT p.id, p.first_name, p.last_name, pn.id, pn.phone_number, op.operator_name, op.operator_number FROM persons p
+                JOIN persons_phone_numbers ppn ON p.id = ppn.person_id
+                JOIN phone_numbers pn ON ppn.phone_number_id = pn.id
+                JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id
+                WHERE p.id = contact_id;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION read_groups()
+RETURNS TABLE (id INTEGER, name VARCHAR, size bigint) AS
+$$
+BEGIN
+    RETURN QUERY SELECT g.id, g.group_name, count(gm.id) as size FROM groups g LEFT JOIN group_members gm ON g.id = gm.group_id GROUP BY g.id;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE delete_contact(contact_id INTEGER)
+AS
+$$
+BEGIN
+    DELETE FROM phone_numbers pn USING persons_phone_numbers
+	WHERE phone_numbers.id = persons_phone_numbers.phone_number_id
+ 	AND persons_phone_numbers.person_id = contact_id;
+	
+	DELETE FROM persons WHERE id = contact_id;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE insert_phone_number_to_person(name VARCHAR)
+AS 
+$$
+BEGIN
+    INSERT INTO groups (group_name) VALUES (name);
+END;
+$$
+LANGUAGE plpgsql;
