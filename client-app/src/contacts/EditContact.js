@@ -13,19 +13,18 @@ import config from '../config.js';
 import axios from 'axios';
 
 /*
-this method is used to send a request to the server in order to
-insert a new contact
+this method is used to create a request to the server in order to
+update an existing contact
 */
-const insert_contact = async function(firstName, lastName, phoneNumber) {
-    var url = config.HOST + '/contacts';
+const update_contact = async function(id, firstName, lastName) {
+    var url = config.HOST + '/contacts/' + id;
     const body = {
         firstName: firstName,
-        lastName: lastName,
-        phoneNumber: phoneNumber
+        lastName: lastName
     }
 
     return axios
-        .post(url, body)
+        .put(url, body)
         .then((response) => {
             return response;
         })
@@ -40,15 +39,13 @@ export default function AddContact(props) {
     const [firstNameError, setFirstNameError] = useState('');
     const [lastName, setLastName] = useState('');
     const [lastNameError, setLastNameError] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [phoneNumberError, setPhoneNumberError] = useState('');
 
     const handleFirstNameChange = (event) => {
         setFirstName(event.target.value.trim());
         console.log(event.target.value);
 
         if (event.target.value.length > 50) {
-            setFirstNameError('First name is too long. Max. characters allowed: 50.');
+            setFirstNameError('First Name is too long. Max. characters allowed: 50.');
         } else if (event.target.value.includes(" ")) {
             setFirstNameError('First name should not contain spaces.');
         } else {
@@ -61,39 +58,27 @@ export default function AddContact(props) {
         console.log(event.target.value);
 
         if (event.target.value.length > 50) {
-            setLastNameError('Last name is too long. Max. characters allowed: 50.');
+            setLastNameError('Last Name is too long. Max. characters allowed: 50.');
         } else if (event.target.value.includes(" ")) {
             setLastNameError('Last name should not contain spaces.');
-        } else {
+        }else {
             setLastNameError('');
-        }
-    }
-
-    const containsOnlyDigits = (str) => /^\d*$/.test(str);
-
-    const handlePhoneNumberChange = (event) => {
-        setPhoneNumber(event.target.value);
-        console.log(event.target.value);
-
-        if (!containsOnlyDigits(event.target.value) || event.target.value.length != 10) {
-            setPhoneNumberError('Phone Number is not correct. The phone number must be 10 digits long.');
-        } else {
-            setPhoneNumberError('');
         }
     }
 
     const handleSaveButton = () => {
         console.log('save button clicked ' + firstName + ' ' + lastName);
-        if (firstNameError != '' || lastNameError != '' || phoneNumberError != '') {
+        if (firstNameError != '' || lastNameError != '') {
             return;
         }
  
-        insert_contact(firstName, lastName, phoneNumber)
+        update_contact(props.selectedRow.id, firstName, lastName)
             .then((response) => {
                 const statusCode = response.status;
                 console.log(statusCode);
                 toast.success(response.data.message, { autoClose: 750, });
-                props.doRefreshPage();
+                props.setRequireRefresh(true);
+                props.refreshSelectedRow();
             })
             .catch((error) => {
                 // toast.error('Error while inserting new contact.');
@@ -108,8 +93,6 @@ export default function AddContact(props) {
         setFirstNameError('');
         setLastName('');
         setLastNameError('');
-        setPhoneNumber('');
-        setPhoneNumberError('');
         setOpen(false);
     }
 
@@ -117,11 +100,11 @@ export default function AddContact(props) {
         <div>
             <ToastContainer/>
             <Dialog open={open} onClose={handleClose} fullWidth>
-                <DialogTitle>Add Contact</DialogTitle>
+                <DialogTitle>Edit contact</DialogTitle>
                 <Divider/>
                 <DialogContent>
                     <DialogContentText>
-                        Add a new contact to the agend.
+                        Edit contact's properties.
                     </DialogContentText>
                     <br/>
                     <TextField
@@ -142,15 +125,6 @@ export default function AddContact(props) {
                         onChange={handleLastNameChange}
                         error={lastNameError != ''}
                         helperText={lastNameError}/>
-                    <TextField 
-                        margin="dense" 
-                        id="phoneNumber" 
-                        label="Phone Number" 
-                        type="tel" 
-                        fullWidth 
-                        onChange={handlePhoneNumberChange}
-                        error={phoneNumberError != ''}
-                        helperText={phoneNumberError}/>
                 </DialogContent>
                 <Divider/>
                 <DialogActions>

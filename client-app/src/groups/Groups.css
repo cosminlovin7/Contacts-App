@@ -1,4 +1,4 @@
-.phone-number-container, .group-container {
+.member-container {
     padding-bottom: 5px;
     padding-top: 5px;
     display: flex;
@@ -7,11 +7,11 @@
     width: 100%;
 }
 
-.ph-left, .g-left {
+.m-left {
     /* Add any additional styles for the left side here */
   }
   
-.ph-right, .g-right {
+.m-right {
 /* Add any additional styles for the right side here */
     display: flex;
     align-items: center;

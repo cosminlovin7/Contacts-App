@@ -1,5 +1,6 @@
 import { React, useState } from 'react';
-import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -7,6 +8,8 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
+import SaveIcon from '@mui/icons-material/Save';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import config from '../config.js';
@@ -14,30 +17,31 @@ import axios from 'axios';
 
 /*
 this method is used to create a request to the server in order to
-insert a new operator
+update an existing operator
 */
-const insert_operator = async function(name, prefix) {
-    var url = config.HOST + '/operators';
+const update_operator = async function(operator_id, operator_name, operator_prefix) {
+    var url = config.HOST + '/operators/' + operator_id;
     const body = {
-        name: name,
-        prefix: prefix
+        name: operator_name,
+        prefix: operator_prefix
     }
 
     return axios
-        .post(url, body)
+        .put(url, body)
         .then((response) => {
             return response;
         })
         .catch((error) => {
             throw error;
         });
-}
+};
 
-export default function AddOperator(props) {
+export default function EditOperator(props) {
     const [open, setOpen] = [props.open, props.setOpen];
-    const [name, setName] = useState('');
+    const [openDeleteOperatorModal, setOpenDeleteOperatorModal] = useState(false);
+    const [name, setName] = useState(props.selectedRow.name);
     const [nameError, setNameError] = useState('');
-    const [prefix, setPrefix] = useState('');
+    const [prefix, setPrefix] = useState(props.selectedRow.prefix);
     const [prefixError, setPrefixError] = useState('');
 
     const handleNameChange = (event) => {
@@ -48,7 +52,7 @@ export default function AddOperator(props) {
         } else {
             setNameError('');
         }
-        setName(event.target.value.trim());
+        setName(event.target.value);
     }
 
     const containsOnlyDigits = (str) => /^\d*$/.test(str);
@@ -62,11 +66,12 @@ export default function AddOperator(props) {
     }
 
     const handleSaveButton = () => {
-        if (nameError != '' || prefixError != '' || name.length == 0 || prefix.length == 0) {
+        if (nameError != '' || prefixError != '') {
             return;
         }
+        console.log(name, prefix)
 
-        insert_operator(name, prefix)
+        update_operator(props.selectedRow.id, name, prefix)
             .then((response) => {
                 const statusCode = response.status;
                 console.log(statusCode);
@@ -77,22 +82,40 @@ export default function AddOperator(props) {
                 toast.error(error.response.data.message, { autoClose: 750, });
             });
 
+
         setOpen(false);
+    }
+
+    const handleDeleteButton = () => {
+        setOpenDeleteOperatorModal(true);
     }
 
     const handleClose = () => {
         setOpen(false);
     }
 
+    const handleDialogClose = () => {
+        props.setOpen(false);
+    }
+
+    const handleDialogExited = () => {
+        props.handleDialogExited();
+    }
+
+
     return (
         <div>
             <ToastContainer/>
-            <Dialog open={open} onClose={handleClose} fullWidth>
-                <DialogTitle>Add Operator</DialogTitle>
+            <Dialog 
+                open={open}
+                onClose={handleDialogClose}
+                onTransitionExited={handleDialogExited}
+                fullWidth>
+                <DialogTitle>Edit operator</DialogTitle>
                 <Divider/>
                 <DialogContent>
                     <DialogContentText>
-                        Add a new operator.
+                        Edit the properties of the operator.
                     </DialogContentText>
                     <br/>
                     <TextField 
@@ -101,6 +124,7 @@ export default function AddOperator(props) {
                         label="Name" 
                         type="text" 
                         fullWidth 
+                        value={name}
                         onChange={handleNameChange}
                         error={nameError != ''}
                         helperText={nameError}/>
@@ -110,14 +134,18 @@ export default function AddOperator(props) {
                         label="Prefix" 
                         type="tel" 
                         fullWidth 
+                        value={prefix}
                         onChange={handlePrefixChange}
                         error={prefixError != ''}
                         helperText={prefixError}/>
                 </DialogContent>
                 <Divider/>
                 <DialogActions>
-                    <Button onClick={handleSaveButton}>Save</Button>
-                    <Button onClick={handleClose}>Cancel</Button>
+                    <Tooltip title="Save changes">
+                        <IconButton onClick={handleSaveButton}>
+                            <SaveIcon/>
+                        </IconButton>
+                    </Tooltip>
                 </DialogActions>
             </Dialog>
         </div>

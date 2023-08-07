@@ -1,4 +1,4 @@
-.phone-number-container, .group-container {
+.delete-action-container {
     padding-bottom: 5px;
     padding-top: 5px;
     display: flex;
@@ -7,12 +7,14 @@
     width: 100%;
 }
 
-.ph-left, .g-left {
+.delete-action-left {
     /* Add any additional styles for the left side here */
+    margin-left: 20px;
   }
   
-.ph-right, .g-right {
+.delete-action-right {
 /* Add any additional styles for the right side here */
     display: flex;
     align-items: center;
+    margin-right: 20px;
 }

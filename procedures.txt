@@ -176,11 +176,49 @@ END;
 $$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE insert_phone_number_to_person(name VARCHAR)
+CREATE OR REPLACE PROCEDURE insert_group(name VARCHAR)
 AS 
 $$
 BEGIN
     INSERT INTO groups (group_name) VALUES (name);
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE insert_contact_into_group(c_id INTEGER, g_id INTEGER)
+AS
+$$
+BEGIN
+    INSERT INTO group_members(person_id, group_id) VALUES(c_id, g_id);
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION read_contactsv2()
+RETURNS TABLE (id INTEGER, first_name VARCHAR, last_name VARCHAR, phone_number_id INTEGER, phone_number VARCHAR, group_id INTEGER, group_name VARCHAR, operator_name VARCHAR, operator_number VARCHAR) AS
+$$
+BEGIN
+    RETURN QUERY SELECT p.id, p.first_name, p.last_name, pn.id, pn.phone_number, g.id, g.group_name, op.operator_name, op.operator_number FROM persons p
+                JOIN persons_phone_numbers ppn ON p.id = ppn.person_id
+                JOIN phone_numbers pn ON ppn.phone_number_id = pn.id
+                JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id
+				JOIN group_members gm ON p.id = gm.person_id
+				JOIN groups g ON gm.group_id = g.id;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION read_contactv2(contact_id INTEGER)
+RETURNS TABLE (id INTEGER, first_name VARCHAR, last_name VARCHAR, phone_number_id INTEGER, phone_number VARCHAR, group_id INTEGER, group_name VARCHAR, operator_name VARCHAR, operator_number VARCHAR) AS
+$$
+BEGIN
+    RETURN QUERY SELECT p.id, p.first_name, p.last_name, pn.id, pn.phone_number, g.id, g.group_name, op.operator_name, op.operator_number FROM persons p
+                JOIN persons_phone_numbers ppn ON p.id = ppn.person_id
+                JOIN phone_numbers pn ON ppn.phone_number_id = pn.id
+                JOIN mobile_network_operators op ON pn.mob_net_operator_id = op.id
+                JOIN group_members gm ON p.id = gm.person_id
+                JOIN groups g on gm.group_id = g.id
+                WHERE p.id = contact_id;
 END;
 $$
 LANGUAGE plpgsql;

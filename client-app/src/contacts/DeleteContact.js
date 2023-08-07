@@ -14,6 +14,10 @@ import './DeleteForm.css';
 import config from '../config.js';
 import axios from 'axios';
 
+/*
+this method is used to create a request to the server in order to
+delete a contact
+*/
 const delete_contact = async function(contact_id) {
     var url = config.HOST + '/contacts/' + contact_id;
 
@@ -36,11 +40,12 @@ export default function DeleteContact(props) {
                 .then((response) => {
                     const statusCode = response.status;
                     console.log(statusCode);
-                    toast.success(response.data.message);
+                    toast.success(response.data.message, { autoClose: 750, });
                     props.doRefreshPage();
                 })
                 .catch((error) => {
-                    toast.error('Error while deleting the contact.');
+                    // toast.error('Error while deleting the contact.');
+                    toast.error(error.response.data.message, { autoClose: 750, });
                 });
             
         setOpen(false);

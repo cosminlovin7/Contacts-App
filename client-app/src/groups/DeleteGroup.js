@@ -16,10 +16,10 @@ import axios from 'axios';
 
 /*
 this method is used to create a request to the server in order to
-delete a phone number
+delete a group
 */
-const delete_phone_number = async function(phone_number_id) {
-    var url = config.HOST + '/phone_numbers/' + phone_number_id;
+const delete_group = async function(group_id) {
+    var url = config.HOST + '/groups/' + group_id;
 
     return axios
         .delete(url)
@@ -31,21 +31,20 @@ const delete_phone_number = async function(phone_number_id) {
         });
 }
 
-export default function DeletePhoneNumber(props) {
+export default function DeleteContact(props) {
     const [open, setOpen] = [props.open, props.setOpen];
 
     const handleYesButton = () => {
-        if (null != props.selectedContact)
-            delete_phone_number(props.selectedContact.id)
+        if (null != props.selectedRow)
+            delete_group(props.selectedRow.id)
                 .then((response) => {
                     const statusCode = response.status;
                     console.log(statusCode);
                     toast.success(response.data.message, { autoClose: 750, });
-                    props.setRequireRefresh(true);
-                    props.refreshSelectedRow();
+                    props.doRefreshPage();
                 })
                 .catch((error) => {
-                    // toast.error('Error while inserting new contact.');
+                    // toast.error('Error while deleting the contact.');
                     toast.error(error.response.data.message, { autoClose: 750, });
                 });
             
@@ -60,11 +59,11 @@ export default function DeletePhoneNumber(props) {
         <div>
             <ToastContainer/>
             <Dialog open={open} onClose={handleClose}>
-                <DialogTitle>Delete contact</DialogTitle>
+                <DialogTitle>Delete group</DialogTitle>
                 <Divider/>
                 <DialogContent>
                     <DialogContentText>
-                        Are you sure you want to delete the phone number?
+                        Are you sure you want to delete the group? You cannot delete a group if there are members in it.
                     </DialogContentText>
                 </DialogContent>
                 <Divider/>

@@ -8,7 +8,7 @@ RUN mkdir -p /usr/src/app
 
 WORKDIR /usr/src/app
 
-COPY ./server/*.py ./
+COPY ./server/ ./
 
 EXPOSE 6000
 

@@ -25,16 +25,16 @@ services:
     volumes:
       - ./database/pgadmin:/var/lib/pgadmin
 
-  # server:
-  #   container_name: server_container
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   image: server_image:latest
-  #   depends_on:
-  #     - database
-  #   ports:
-  #     - "6000:6000"
+  server:
+    container_name: server_container
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: server_image:latest
+    depends_on:
+      - database
+    ports:
+      - "6001:6001"
 
 volumes:
   database_storage:

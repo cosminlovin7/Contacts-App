@@ -16,10 +16,10 @@ import axios from 'axios';
 
 /*
 this method is used to create a request to the server in order to
-delete a phone number
+remove a contact from a group
 */
-const delete_phone_number = async function(phone_number_id) {
-    var url = config.HOST + '/phone_numbers/' + phone_number_id;
+const delete_contact_from_group = async function(contactId, groupId) {
+    const url = config.HOST + '/contacts/' + contactId + '/groups/' + groupId;
 
     return axios
         .delete(url)
@@ -31,12 +31,13 @@ const delete_phone_number = async function(phone_number_id) {
         });
 }
 
-export default function DeletePhoneNumber(props) {
+export default function DeleteGroupMember(props) {
     const [open, setOpen] = [props.open, props.setOpen];
 
     const handleYesButton = () => {
-        if (null != props.selectedContact)
-            delete_phone_number(props.selectedContact.id)
+        if (null != props.selectedGroup && null != props.selectedRow)
+            console.log(props.selectedRow.id, props.selectedGroup.id);
+            delete_contact_from_group(props.selectedRow.id, props.selectedGroup.id)
                 .then((response) => {
                     const statusCode = response.status;
                     console.log(statusCode);
@@ -45,10 +46,9 @@ export default function DeletePhoneNumber(props) {
                     props.refreshSelectedRow();
                 })
                 .catch((error) => {
-                    // toast.error('Error while inserting new contact.');
-                    toast.error(error.response.data.message, { autoClose: 750, });
+                    toast.error('Error while exiting the group.', { autoClose: 750, });
                 });
-            
+        
         setOpen(false);
     }
 
@@ -60,11 +60,11 @@ export default function DeletePhoneNumber(props) {
         <div>
             <ToastContainer/>
             <Dialog open={open} onClose={handleClose}>
-                <DialogTitle>Delete contact</DialogTitle>
+                <DialogTitle>Remove contact</DialogTitle>
                 <Divider/>
                 <DialogContent>
                     <DialogContentText>
-                        Are you sure you want to delete the phone number?
+                        Are you sure you want to remove the contact from the group?
                     </DialogContentText>
                 </DialogContent>
                 <Divider/>

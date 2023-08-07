@@ -21,11 +21,22 @@ import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import { ToastContainer, toast } from 'react-toastify';
+import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
+import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteGroupMember from './DeleteGroupMember.js';
+import DeleteGroup from './DeleteGroup.js';
+import EditIcon from '@mui/icons-material/Edit';
+import EditGroup from './EditGroup.js';
 import 'react-toastify/dist/ReactToastify.css';
 import '../components/DefaultPage.css';
+import './Groups.css';
 import config from '../config.js';
 import axios from 'axios';
 
+/*
+this method is used to create a request to the server in order to
+get all the groups
+*/
 const fetchGroups = async function() {
     return axios
         .get(config.HOST + '/groups')
@@ -36,6 +47,21 @@ const fetchGroups = async function() {
             throw error;
         });
 };
+
+/*
+this method is used to create a request to the server in order to
+get a group based on its id
+*/
+const fetchGroup = async function(groupId) {
+    return axios
+        .get(config.HOST + '/groups/' + groupId)
+        .then((response) => {
+            return response.data;
+        })
+        .catch((error) => {
+            throw error;
+        });
+}
 
 const table_row_styles = {
     background: 'rgb(0,174,191)',
@@ -48,30 +74,37 @@ const table_row_styles = {
 export default function Groups() {
     const [openModal, setOpenModal] = useState(false);
     const [openGroupDetails, setOpenGroupDetails] = useState(false);
+    const [openDeleteGroupMemberModal, setOpenDeleteGroupMemberModal] = useState(false);
+    const [openDeleteGroupModal, setOpenDeleteGroupModal] = useState(false);
+    const [openEditGroupModal, setOpenEditGroupModal] = useState(false);
     const [refreshPage, setRefreshPage] = useState(false);
     const [requireRefresh, setRequireRefresh] = useState(false);
     const [selectedRow, setSelectedRow] = useState(null);
     const [groupsData, setGroupsData] = useState(null);
+    const [selectedContact, setSelectedContact ] = useState(null);
 
     function doRefreshPage() {
         setOpenModal(false);
         setOpenGroupDetails(false);
+        setOpenDeleteGroupMemberModal(false);
+        setOpenEditGroupModal(false);
         setRefreshPage(!refreshPage);
         setRequireRefresh(false);
         setSelectedRow(null);
         setGroupsData(null);
+        setSelectedContact(null);
     }
 
     useEffect(() => {
         fetchGroups()
             .then((data) => {
                 console.log('Data fetched successfully:', data);
-                toast.success('Groups loaded successfully.');
+                toast.success('Groups loaded successfully.', { autoClose: 750, });
                 setGroupsData(data);
             })
             .catch((error) => {
                 console.error('Error while fetching the groups:', error);
-                toast.error('Error while loading data.');
+                toast.error('Error while loading data.', { autoClose: 750, });
             })
     }, [refreshPage]);
 
@@ -81,7 +114,15 @@ export default function Groups() {
 
     function handleRowClick(row) {
         console.log(row);
-        setSelectedRow(row);
+        fetchGroup(row.id)
+            .then((data) => {
+                console.log(data.group);
+                setSelectedRow(data.group);
+            })
+            .catch((error) => {
+                console.error('Error while fetching the groups:', error);
+            })
+
         setOpenGroupDetails(true);
     }
 
@@ -94,6 +135,33 @@ export default function Groups() {
         if (requireRefresh) {
             doRefreshPage()
         }
+    }
+
+    const handleDeleteGroup = () => {
+        console.log('delete group button pressed.');
+        setOpenDeleteGroupModal(true);
+    }
+
+    const handleEditGroup = () => {
+        setOpenEditGroupModal(true);
+    }
+
+    function handleOnRemoveMember(member) {
+        console.log('remove from group button clicked', member, selectedRow);
+        setSelectedContact(member);
+        setOpenDeleteGroupMemberModal(true);
+    }
+
+    function refreshSelectedRow() {
+        if (null != selectedRow)
+            fetchGroup(selectedRow.id)
+                .then((data) => {
+                    console.log(data.group);
+                    setSelectedRow(data.group);
+                })
+                .catch((error) => {
+                    console.error('Error while fetching the groups:', error);
+                })
     }
 
     return (
@@ -151,41 +219,34 @@ export default function Groups() {
                         <AccordionSummary>
                             <b>Members</b>
                         </AccordionSummary>
-                        {/* <AccordionDetails style={{ maxHeight: '200px', overflow: 'auto' }}>
+                        <AccordionDetails style={{ maxHeight: '200px', overflow: 'auto' }}>
                             {selectedRow != null ? <ul style={{ listStyleType: 'none', padding: 0 }}>
-                                {selectedRow.phoneNumbers.map((phoneNumber, index) => (
+                                {selectedRow.members.map((member, index) => (
                                     <li key={index}>
-                                        {'' != phoneNumber.operatorName ? 
-                                        (<div className="phone-number-container"><div className="ph-left">{phoneNumber.number}({phoneNumber.operatorName})</div><div className="ph-right"><Tooltip title="Remove phone number"><IconButton onClick={() => handleOnRemovePhoneNumber(phoneNumber)}><PhonelinkEraseIcon/></IconButton></Tooltip></div></div>) : 
-                                        (<div className="phone-number-container"><div className="ph-left">{phoneNumber.number}</div><div className="ph-right"><Tooltip title="Remove phone number"><IconButton onClick={() => handleOnRemovePhoneNumber(phoneNumber)}><PhonelinkEraseIcon/></IconButton></Tooltip></div></div>)}
+                                        <div className="member-container"><div className="m-left">{member.name}</div><div className="m-right"><Tooltip title="Remove phone number"><IconButton onClick={() => handleOnRemoveMember(member)}><PersonRemoveIcon/></IconButton></Tooltip></div></div>
                                     </li>
                 
                                 ))}
                             </ul> : ''}
-                        </AccordionDetails> */}
+                        </AccordionDetails>
                     </Accordion>
                 </DialogContent>
                 <DialogActions>
-                    {/* <Tooltip title="Add to group">
-                        <IconButton onClick={handleAddContactToGroup}>
-                            <GroupAddIcon/>
+                    <Tooltip title="Edit group">
+                        <IconButton onClick={handleEditGroup}>
+                            <EditIcon/>
                         </IconButton>
                     </Tooltip>
-                    <AddContactToGroup open={openCTGModal} setOpen={setOpenCTGModal} setRequireRefresh={setRequireRefresh}/>
-                    <Tooltip title="Add phone number">
-                        <IconButton onClick={handleAddPhoneNumber}>
-                            <AddIcCallIcon/>
-                        </IconButton>
-                    </Tooltip>
-                    <AddPhoneNumber open={openAddPhoneModal} setOpen={setOpenAddPhoneModal} selectedRow={selectedRow} setRequireRefresh={setRequireRefresh} refreshSelectedRow={refreshSelectedRow}/>
-                    <Tooltip title="Delete contact">
-                        <IconButton onClick={handleDeleteContact}>
+                    <EditGroup open={openEditGroupModal} setOpen={setOpenEditGroupModal} selectedRow={selectedRow} setRequireRefresh={setRequireRefresh} refreshSelectedRow={refreshSelectedRow}/>
+                    <Tooltip title="Delete group">
+                        <IconButton onClick={handleDeleteGroup}>
                             <DeleteIcon/>
                         </IconButton>
                     </Tooltip>
-                    <DeleteContact open={openDeleteContactModal} setOpen={setOpenDeleteContactModal} selectedRow={selectedRow} doRefreshPage={doRefreshPage}/> */}
+                    <DeleteGroup open={openDeleteGroupModal} setOpen={setOpenDeleteGroupModal} selectedRow={selectedRow} doRefreshPage={doRefreshPage}/>
                 </DialogActions>
             </Dialog>
+            <DeleteGroupMember open={openDeleteGroupMemberModal} setOpen={setOpenDeleteGroupMemberModal} selectedRow={selectedContact} selectedGroup={selectedRow} setRequireRefresh={setRequireRefresh} refreshSelectedRow={refreshSelectedRow}/>
         </div>
     );
 };

@@ -12,6 +12,10 @@ import 'react-toastify/dist/ReactToastify.css';
 import config from '../config.js';
 import axios from 'axios';
 
+/*
+this method is used to create a request to the server in order to
+insert a new phone number
+*/
 const insert_phone_number = async function(contactId, phoneNumber) {
     const url = config.HOST + '/contacts/' + contactId + '/phone_numbers';
 
@@ -59,22 +63,21 @@ export default function AddContactToGroup(props) {
             .then((response) => {
                 const statusCode = response.status;
                 console.log(statusCode);
-                if (statusCode == 201) {
-                    toast.success(response.data.message);
-                    props.setRequireRefresh(true);
-                    props.refreshSelectedRow();
-                } else if (statusCode == 409) {
-                    toast.warn(response.data.error);
-                }
+                toast.success(response.data.message, { autoClose: 750, });
+                props.setRequireRefresh(true);
+                props.refreshSelectedRow();
             })
             .catch((error) => {
-                toast.error('Error while inserting new contact.');
+                // toast.error('Error while inserting new contact.');
+                toast.error(error.response.data.message, { autoClose: 750, });
             });
             
         setOpen(false);
     }
 
     const handleClose = () => {
+        setPhoneNumber('');
+        setPhoneNumberError('');
         setOpen(false);
     }
 

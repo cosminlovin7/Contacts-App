@@ -15,8 +15,8 @@ class Database:
         while not connected:
             try:
                 connection = psycopg2.connect(
-                    # host = 'database',
-                    host = 'localhost',
+                    host = 'database',
+                    # host = 'localhost',
                     user = 'cosmin',
                     password = 'fdcaf0f0-2e2d-11ee-be56-0242ac120002',
                     database = 'contacts',

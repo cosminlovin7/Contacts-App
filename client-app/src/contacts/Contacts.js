@@ -7,6 +7,7 @@ import AddContactToGroup from './AddContactToGroup.js';
 import AddPhoneNumber from './AddPhoneNumber.js';
 import DeleteContact from './DeleteContact.js';
 import DeletePhoneNumber from './DeletePhoneNumber.js';
+import DeleteGroupMember from './DeleteGroupMember.js';
 import TableContainer from '@mui/material/TableContainer';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -15,6 +16,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TablePagination from '@mui/material/TablePagination';
 import Card from '@mui/material/Card';
+import Paper from '@mui/material/Paper';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
@@ -37,6 +39,9 @@ import AddIcCallIcon from '@mui/icons-material/AddIcCall';
 import { ToastContainer, toast } from 'react-toastify';
 import PhonelinkEraseIcon from '@mui/icons-material/PhonelinkErase';
 import DeleteIcon from '@mui/icons-material/Delete';
+import GroupRemoveIcon from '@mui/icons-material/GroupRemove';
+import EditIcon from '@mui/icons-material/Edit';
+import EditContact from './EditContact.js';
 import 'react-toastify/dist/ReactToastify.css';
 import '../components/DefaultPage.css';
 import './Contacts.css'
@@ -51,9 +56,13 @@ const table_row_styles = {
     filter: 'progid:DXImageTransform.Microsoft.gradient(startColorstr="#00aebf",endColorstr="#00ffab",GradientType=1)'
 };
 
-const fetchContacts = async function(page) {
+/*
+this method is used to create a request to the server in order to
+get all the contacts in the database
+*/
+const fetchContacts = async function() {
     return axios
-        .get(config.HOST + '/contacts/page/' + page)
+        .get(config.HOST + '/contacts')
         .then((response) => {
             return response.data;
         })
@@ -62,23 +71,18 @@ const fetchContacts = async function(page) {
         });
 };
 
-const fetchContactsCount = async function() {
-    return axios
-        .get(config.HOST + '/contacts/count')
-        .then((response) => {
-            return response.data;
-        })
-        .catch((error) => {
-            throw error;
-        });
-}
-
+/*
+this method is used to create a request to the server in order to
+get a page of filtered contacts based on some parameters
+*/
 const fetchContactsFiltered = async function(page, filterName, filterPhoneNumber, filterGroup, filterOperator) {
     var url = config.HOST + '/contacts/page/' + page + '/filter?';
     if ('' != filterName)
         url += 'name=' + filterName;
     if ('' != filterPhoneNumber)
         url += '&phone_number=' + filterPhoneNumber;
+    if ('' != filterGroup)
+        url += '&group_id=' + filterGroup;
     if ('' != filterOperator)
         url += '&mobile_network_operator=' + filterOperator;
 
@@ -92,14 +96,28 @@ const fetchContactsFiltered = async function(page, filterName, filterPhoneNumber
         });
 }
 
+/*
+this method is used to create a request to the server in order to
+get the total number of filtered contacts
+*/
 const fetchContactsFilteredCount = async function(filterName, filterPhoneNumber, filterGroup, filterOperator) {
     var url = config.HOST + '/contacts/count/filter?';
-    if ('' != filterName)
+    if ('' != filterName) {
+        console.log(filterName)
         url += 'name=' + filterName;
-    if ('' != filterPhoneNumber)
+    }
+    if ('' != filterPhoneNumber) {
+        console.log(filterPhoneNumber)
         url += '&phone_number=' + filterPhoneNumber;
-    if ('' != filterOperator)
+    }
+    if ('' != filterGroup) {
+        console.log(filterGroup)
+        url += '&group_id=' + filterGroup;
+    }
+    if ('' != filterOperator) {
+        console.log(filterOperator)
         url += '&mobile_network_operator=' + filterOperator;
+    }
 
     return axios
         .get(url)
@@ -111,6 +129,10 @@ const fetchContactsFilteredCount = async function(filterName, filterPhoneNumber,
         });
 }
 
+/*
+this method is used to create a request to the server in order to
+get a contact based on its id
+*/
 const fetchContactById = async function(contact_id) {
     var url = config.HOST + '/contacts/' + contact_id;
 
@@ -124,6 +146,10 @@ const fetchContactById = async function(contact_id) {
         });
 }
 
+/*
+this method is used to create a request to the server in order to
+get all the groups created
+*/
 const fetchGroups = async function() {
     var url = config.HOST + '/groups';
 
@@ -144,89 +170,98 @@ export default function Contacts() {
     const [openAddPhoneModal, setOpenAddPhoneModal] = useState(false);
     const [openDeleteContactModal, setOpenDeleteContactModal] = useState(false);
     const [openDeletePhoneNumberModal, setOpenDeletePhoneNumberModal] = useState(false);
+    const [openDeleteGroupMemberModal, setOpenDeleteGroupMemberModal] = useState(false);
+    const [openEditContactModal, setOpenEditContactModal] = useState(false);
     const [selectedRow, setSelectedRow] = useState(null);
     const [filterName, setFilterName] = useState('');
     const [filterPhoneNumber, setFilterPhoneNumber] = useState('');
     const [filterGroup, setFilterGroup] = useState('');
     const [filterOperator, setFilterOperator] = useState('');
+    const [filteredContactsData, setFilteredContactsData] = useState(null);
+    const [filteredContactsCount, setFilteredContactsCount] = useState(0);
     const [contactsData, setContactsData] = useState(null);
-    const [contactsCount, setContactsCount] = useState(0);
     const [page, setPage] = useState(0);
     const [pageFiltered, setPageFiltered] = useState(false);
     const [refreshPage, setRefreshPage] = useState(false);
     const [selectedContact, setSelectedContact] = useState(null);
+    const [selectedGroup, setSelectedGroup] = useState(null);
     const [requireRefresh, setRequireRefresh] = useState(false);
     const [groupsData, setGroupsData] = useState(null);
-
+    
     function doRefreshPage() {
         setOpenProfileModal(false);
         setOpenCTGModal(false);
         setOpenModal(false);
         setOpenAddPhoneModal(false);
         setOpenDeleteContactModal(false);
+        setOpenDeletePhoneNumberModal(false);
+        setOpenDeleteGroupMemberModal(false);
+        setOpenEditContactModal(false);
         setSelectedRow(null);
+        setFilteredContactsData(null);
+        setFilteredContactsCount(0);
+        setPage(0);
         setFilterName('');
         setFilterPhoneNumber('');
         setFilterGroup('');
-        setContactsData(null);
-        setContactsCount(0);
-        setPage(0);
+        setFilterOperator('');
         setPageFiltered(false);
         setRefreshPage(!refreshPage);
         setSelectedContact(null);
         setRequireRefresh(false);
         setGroupsData(null);
+        setContactsData(null);
+        setSelectedGroup(null);
     }
 
     useEffect(() => {
-        if (!pageFiltered) {
-            fetchContacts(page)
-                .then((data) => {
-                    console.log('Data fetched successfully:', data);
-                    toast.success('Contacts loaded successfully.');
-                    setContactsData(data);
-                })
-                .catch((error) => {
-                    console.error('Error while fetching the contacts:', error);
-                    toast.error('Error while loading data.');
-                })
-
-            fetchContactsCount()
-                .then((data) => {
-                    console.log('Contacts count: ', data);
-                    setContactsCount(data.contact);
-                })
-                .catch((error) => {
-                    console.error('Error while fetching the countacts count:', error);
-                })
-        } else {
+        if (pageFiltered) {
             fetchContactsFiltered(page, filterName, filterPhoneNumber, filterGroup, filterOperator)
                 .then((data) => {
-                    toast.success('Filtered contacts loaded successfully.');
-                    setContactsData(data);
+                    console.log('Data fetched successfully:', data);
+                    toast.success('Filtered contacts loaded successfully.', { autoClose: 750, });
+                    setFilteredContactsData(data);
                 })
                 .catch((error) => {
-                    toast.error('Error while loading filtered data.');
+                    // toast.error('Error while loading filtered data.');
+                    toast.error(error.response.data.message, { autoClose: 750, });
                 })
 
             fetchContactsFilteredCount(filterName, filterPhoneNumber, filterGroup, filterOperator)
                 .then((data) => {
-                    setContactsCount(data.contact);
+                    console.log('Contacts count: ', data);
+                    setFilteredContactsCount(data.contact);
                 })
                 .catch((error) => {
-                    toast.error('Error while fetching the contacts filtered count.');
+                    // toast.error('Error while fetching the contacts filtered count.');
+                    toast.error(error.response.data.message, { autoClose: 750, });
                 })
         }
 
+    }, [page, pageFiltered, refreshPage]);
+
+    useEffect(() => {
+        fetchContacts()
+            .then((data) => {
+                console.log('Data fetched successfully:', data);
+                toast.success('Contacts loaded successfully.', { autoClose: 750, });
+                setContactsData(data);
+            })
+            .catch((error) => {
+                // toast.error('Error while fetching the contacts.');
+                toast.error(error.response.data.message, { autoClose: 750, });
+            })
+
         fetchGroups()
             .then((data) => {
+                console.log('Groups fetched: ', data);
                 setGroupsData(data);
             })
             .catch((error) => {
-                toast.error('Error while fetching the contacts filtered count.');
+                // toast.error('Error while fetching the groups.');
+                toast.error(error.response.data.message, { autoClose: 750, });
             })
-
-    }, [page, pageFiltered, refreshPage]);
+    }, [refreshPage])
 
     const handleAddContact = () => {
         setOpenModal(true);
@@ -244,6 +279,10 @@ export default function Contacts() {
         setOpenDeleteContactModal(true);
     }
 
+    const handleEditContact = () => {
+        setOpenEditContactModal(true);
+    }
+
     function refreshSelectedRow() {
         if (null != selectedRow)
             fetchContactById(selectedRow.id)
@@ -251,7 +290,8 @@ export default function Contacts() {
                     setSelectedRow(data.contact);
                 })
                 .catch((error) => {
-                    toast.error('Error while fetching the contact.');
+                    // toast.error('Error while fetching the contact.');
+                    toast.error(error.response.data.message, { autoClose: 750, });
                 })
     }
 
@@ -262,7 +302,7 @@ export default function Contacts() {
                 setSelectedRow(data.contact);
             })
             .catch((error) => {
-                toast.error('Error while fetching the contact.');
+                toast.error(error.response.data.message, { autoClose: 750, });
             })
 
         setOpenProfileModal(true);
@@ -274,6 +314,7 @@ export default function Contacts() {
 
     function handleDialogExited() {
         setSelectedRow(null);
+        console.log(filterGroup);
         if (requireRefresh) {
             doRefreshPage()
         }
@@ -313,13 +354,19 @@ export default function Contacts() {
     const handleChangePage = (event, newPage) => {
         console.log('page changed');
         setPage(newPage);
-        setContactsData(null);
+        setFilteredContactsData(null);
     }
 
     function handleOnRemovePhoneNumber(phoneNumber) {
         console.log('remove phone number function called.', phoneNumber);
         setSelectedContact(phoneNumber);
         setOpenDeletePhoneNumberModal(true);
+    }
+
+    function handleOnRemoveGroup(group) {
+        console.log ('remove from group function called', group);
+        setSelectedGroup(group);
+        setOpenDeleteGroupMemberModal(true);
     }
 
     return (
@@ -338,6 +385,32 @@ export default function Contacts() {
                         </Tooltip>
                         <AddContact open={openModal} setOpen={setOpenModal} doRefreshPage={doRefreshPage}/>
                     </div>
+                </div>
+                <div className = "content" >
+                    <Paper sx={{ minWidth: 475, overflow: 'hidden' }}>
+                    <TableContainer sx={{ maxHeight: 350 }}>
+                        <Table >
+                            <TableHead>
+                                <TableRow style={table_row_styles}>
+                                    <TableCell >Name</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            {null != contactsData ? (<TableBody>
+                                {contactsData.contacts.map((contact, index) => {
+                                    return (
+                                    <TableRow sx={{ cursor: 'pointer' }} hover key={index} onClick={() => handleRowClick(contact)}>
+                                        <TableCell >{contact.name}</TableCell>
+                                    </TableRow>
+                                    );
+                                })}
+                            </TableBody>) : <TableBody/>}
+                        </Table>
+                    </TableContainer>
+                    </Paper>
+                </div>
+
+                <div className = "tool-bar">
+                    <div className = "button left"></div>
                     <div className = "button right">
                         <TextField
                             margin="dense" 
@@ -358,9 +431,9 @@ export default function Contacts() {
                                 onChange={handleFilterGroupChange}
                                 >
                                     {null != groupsData ? (
-                                        groupsData.groups.map((group) => {
+                                        groupsData.groups.map((group, index) => {
                                             return (
-                                                <MenuItem key={group.id} value={group.name}>{group.name}</MenuItem>
+                                                <MenuItem key={index} value={group.name}>{group.name}</MenuItem>
                                             );
                                         })
                                     ) : ''}
@@ -405,13 +478,13 @@ export default function Contacts() {
                                     <TableCell align="right">Mobile Network Operator</TableCell>
                                 </TableRow>
                             </TableHead>
-                            {null != contactsData ? (<TableBody>
-                                {contactsData.contacts.map((contact) => {
+                            {null != filteredContactsData && true == pageFiltered ? (<TableBody>
+                                {filteredContactsData.contacts.map((contact, index) => {
                                     return (
-                                    <TableRow sx={{ cursor: 'pointer' }} hover key={contact.id + contact.phoneNumber.number} onClick={() => handleRowClick(contact)}>
+                                    <TableRow sx={{ cursor: 'pointer' }} hover key={index} onClick={() => handleRowClick(contact)}>
                                         <TableCell >{contact.name}</TableCell>
-                                        <TableCell align="right">N/A</TableCell>
-                                        <TableCell align="right">{contact.phoneNumber.number}</TableCell>
+                                        <TableCell align="right">{null != contact.group ? contact.group.name : 'N/A'}</TableCell>
+                                        <TableCell align="right">{null != contact.phoneNumber ? contact.phoneNumber.number : 'N/A'}</TableCell>
                                         <TableCell align="right">{'' != contact.operatorName ? contact.operatorName : 'N/A'}</TableCell>
                                     </TableRow>
                                     );
@@ -422,7 +495,7 @@ export default function Contacts() {
                     <TablePagination
                         rowsPerPageOptions={[10]}
                         component="div"
-                        count={contactsCount}
+                        count={filteredContactsCount}
                         rowsPerPage={10}
                         page={page}
                         onPageChange={handleChangePage}
@@ -463,21 +536,29 @@ export default function Contacts() {
                             <b>Groups</b>
                         </AccordionSummary>
                         <AccordionDetails style={{ maxHeight: '200px', overflow: 'auto' }}>
-                            {/* {selectedRow != null ? <ul style={{ listStyleType: 'none', padding: 0 }}>
+                            {selectedRow != null ? <ul style={{ listStyleType: 'none', padding: 0 }}>
                                 {selectedRow.groups.map((group, index) => (
-                                    <li key={index}>{group}</li>
+                                    <li key={index}>
+                                        <div className="group-container"><div className="g-left">{group.name}</div><div className="g-right"><Tooltip title="Remove from group"><IconButton onClick={() => handleOnRemoveGroup(group)}><GroupRemoveIcon/></IconButton></Tooltip></div></div>
+                                    </li>
                                 ))}
-                            </ul> : ''} */}
+                            </ul> : ''}
                         </AccordionDetails>
                     </Accordion>
                 </DialogContent>
                 <DialogActions>
+                    <Tooltip title="Edit contact">
+                        <IconButton onClick={handleEditContact}>
+                            <EditIcon/>
+                        </IconButton>
+                    </Tooltip>
+                    <EditContact open={openEditContactModal} setOpen={setOpenEditContactModal} selectedRow={selectedRow} setRequireRefresh={setRequireRefresh} refreshSelectedRow={refreshSelectedRow}/>
                     <Tooltip title="Add to group">
                         <IconButton onClick={handleAddContactToGroup}>
                             <GroupAddIcon/>
                         </IconButton>
                     </Tooltip>
-                    <AddContactToGroup open={openCTGModal} setOpen={setOpenCTGModal} setRequireRefresh={setRequireRefresh}/>
+                    <AddContactToGroup open={openCTGModal} setOpen={setOpenCTGModal} setRequireRefresh={setRequireRefresh} groupsData={groupsData} selectedRow={selectedRow} refreshSelectedRow={refreshSelectedRow}/>
                     <Tooltip title="Add phone number">
                         <IconButton onClick={handleAddPhoneNumber}>
                             <AddIcCallIcon/>
@@ -493,6 +574,7 @@ export default function Contacts() {
                 </DialogActions>
             </Dialog>
             <DeletePhoneNumber open={openDeletePhoneNumberModal} setOpen={setOpenDeletePhoneNumberModal} selectedContact={selectedContact} setRequireRefresh={setRequireRefresh} refreshSelectedRow={refreshSelectedRow}/>
+            <DeleteGroupMember open={openDeleteGroupMemberModal} setOpen={setOpenDeleteGroupMemberModal} selectedRow={selectedRow} selectedGroup={selectedGroup} setRequireRefresh={setRequireRefresh} refreshSelectedRow={refreshSelectedRow}/>
         </div>
     );
 }

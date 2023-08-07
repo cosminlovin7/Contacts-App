@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MenuBar from '../components/MenuBar.js';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import IconButton from '@mui/material/IconButton';
@@ -11,17 +11,38 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Card from '@mui/material/Card';
 import Tooltip from '@mui/material/Tooltip';
+import EditOperator from './EditOperator.js';
 import '../components/DefaultPage.css';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import config from '../config.js';
+import axios from 'axios';
 
-function createData(name, prefix) {
-    return { name, prefix };
+/*
+this method is used to create a request to the server in order to
+get all the operators
+*/
+const fetchOperators = async function() {
+    return axios
+        .get(config.HOST + '/operators')
+        .then((response) => {
+            return response.data;
+        })
+        .catch((error) => {
+            throw error;
+        });
+};
+
+const fetchOperator = async function(operatorId) {
+    return axios
+        .get(config.HOST + '/operators/' + operatorId)
+        .then((response) => {
+            return response.data;
+        })
+        .catch((error) => {
+            throw error;
+        });
 }
-  
-const rows = [
-    createData('DIGI', '077'),
-    createData('Vodafone', '072'),
-    createData('Orange', '074'),
-];
 
 const table_row_styles = {
     background: 'rgb(0,174,191)',
@@ -33,6 +54,33 @@ const table_row_styles = {
 
 export default function Operators() {
     const [openModal, setOpenModal] = useState(false);
+    const [openOperatorEditModal, setOpenOperatorEditModal] = useState(false);
+    const [refreshPage, setRefreshPage] = useState(false);
+    const [requireRefresh, setRequireRefresh] = useState(false);
+    const [selectedRow, setSelectedRow] = useState(null);
+    const [operatorsData, setOperatorsData] = useState(null);
+
+    function doRefreshPage() {
+        setOpenModal(false);
+        setOpenOperatorEditModal(false);
+        setRefreshPage(!refreshPage);
+        setRequireRefresh(false);
+        setSelectedRow(null);
+        setOperatorsData(null);
+    }
+
+    useEffect(() => {
+        fetchOperators()
+            .then((data) => {
+                console.log('Data fetched successfully:', data);
+                toast.success('Operators loaded successfully.', { autoClose: 750, });
+                setOperatorsData(data);
+            })
+            .catch((error) => {
+                console.error('Error while fetching the operators:', error);
+                toast.error('Error while loading data.', { autoClose: 750, });
+            })
+    }, [refreshPage]);
 
     const handleAddOperator = () => {
         setOpenModal(true);
@@ -40,6 +88,19 @@ export default function Operators() {
 
     function handleRowClick(row) {
         console.log(row);
+        setSelectedRow(row);
+        setOpenOperatorEditModal(true);
+    }
+
+    function handleDialogClose() {
+        setOpenOperatorEditModal(false);
+    }
+
+    function handleDialogExited() {
+        setSelectedRow(null);
+        if (requireRefresh) {
+            doRefreshPage()
+        }
     }
 
     return (
@@ -55,7 +116,7 @@ export default function Operators() {
                                 <AddCircleIcon/>
                             </IconButton>
                         </Tooltip>
-                        <AddOperator open={openModal} setOpen={setOpenModal}/>
+                        <AddOperator open={openModal} setOpen={setOpenModal} doRefreshPage={doRefreshPage}/>
                     </div>
                 </div>
                 <div className = "content">
@@ -67,19 +128,20 @@ export default function Operators() {
                                     <TableCell align="right">Prefix</TableCell>
                                 </TableRow>
                             </TableHead>
-                            <TableBody>
-                                {rows.map((row) => (
-                                    <TableRow sx={{ cursor: 'pointer' }} hover key={row.prefix} onClick={() => handleRowClick(row)}>
-                                        <TableCell >{row.name}</TableCell>
-                                        <TableCell align="right">{row.prefix}</TableCell>
+                            {null != operatorsData ? (<TableBody>
+                                {operatorsData.operators.map((operator, index) => (
+                                    <TableRow sx={{ cursor: 'pointer' }} hover key={index} onClick={() => handleRowClick(operator)}>
+                                        <TableCell >{operator.name}</TableCell>
+                                        <TableCell align="right">{operator.prefix}</TableCell>
                                     </TableRow>
                                 ))}
-                            </TableBody>
+                            </TableBody>) : ''}
                         </Table>
                     </TableContainer>
                 </div>
-            </div>
-            
+            </div> 
+
+            {null != selectedRow ? <EditOperator open={openOperatorEditModal} setOpen={setOpenOperatorEditModal} handleDialogExited={handleDialogExited} selectedRow={selectedRow} doRefreshPage={doRefreshPage}/> : ''}
         </div>
     );
 };
